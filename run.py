@@ -11,7 +11,8 @@ import csv
 from vne.vae import ShapeVAE, ShapeSimilarityLoss
 from vne.special.affinity_mat_create import similarity_matrix
 from vne.special.alphanumeric_simulator import  alpha_num_Simulator
-from vne.vis import plot_affinity, plot_loss,plot_umap, to_img, plot_pose, plot_z_disentanglement
+from vne.vis import plot_affinity, plot_loss,plot_umap, to_img
+from vne.vis import plot_pose_interpolation, plot_pose, plot_z_disentanglement
 from vne.dataset import alphanumDataset, SubTomogram_dataset, CustomMNIST
 from vne.read_config import get_config_values
 from tqdm import tqdm
@@ -183,8 +184,10 @@ for epoch in range(EPOCHS):
         plot_umap(enc_train, lbl_train,epoch,molecule_list, f"UMAP_train{epoch}")
         plot_loss(loss_plot, kldloss_plot,sloss_plot,rloss_plot)
 
-plot_z_disentanglement(dataset,model,device)
 
 torch.save(model.state_dict(), './conv_autoencoder.pth')
 plot_pose(model,dataset,device)
+plot_pose_interpolation(model,dataset,device)
+plot_z_disentanglement(dataset,model,device)
+
 # plot loss vs EPOCH

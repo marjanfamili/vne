@@ -101,6 +101,23 @@ def plot_z_disentanglement(dataset,model,device):
     plt.savefig("z_interpolate.png")
 
 
+def plot_pose_interpolation(model,dataset,device):
+    with torch.inference_mode():
+        r = []
+        y = dataset[0]
+        x, z, z_pose, mu, logvar = model(y[np.newaxis, ...].to(device=device, dtype=torch.float))
+
+        for theta in np.linspace(-1, 1, 16):
+            z_pose[0, 0] = float(theta)
+            y_hat = model.decode(z_pose.to(device))
+            r.append(np.squeeze(y_hat[0].cpu()))
+    r = np.stack(r, axis=0)
+    m = montage(r, grid_shape=(1, r.shape[0]))
+    plt.figure(figsize=(16, 2))
+    plt.imshow(m)
+    plt.savefig("pose_interpolation.png", dpi=144)
+
+
 def plot_pose(model,dataset,device):
     pose_angle = []
     r = []
