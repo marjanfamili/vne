@@ -125,6 +125,9 @@ def plot_pose(model,dataset,device):
 
     with torch.inference_mode():
         for theta in range(THETA_LOWER,THETA_UPPER):
+            # This is at the moement not working because you need to take 
+            # an image at zero degree rotation and then rotate that by specific angle theta
+            # and then do the following
             y = dataset[3]
             x, z, z_pose, mu, logvar = model(y[0][np.newaxis, ...].to(device=device))     
             if theta % 5 == 0 : 
