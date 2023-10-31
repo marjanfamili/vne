@@ -105,11 +105,10 @@ def plot_pose_interpolation(model,dataset,device):
     with torch.inference_mode():
         r = []
         y = dataset[0]
-        x, z, z_pose, mu, logvar = model(y[np.newaxis, ...].to(device=device, dtype=torch.float))
+        x, z, z_pose, mu, logvar = model(y[0][np.newaxis, ...].to(device=device, dtype=torch.float))
 
         for theta in np.linspace(-1, 1, 16):
-            z_pose[0, 0] = float(theta)
-            y_hat = model.decode(z_pose.to(device))
+            y_hat = model.decode(z.to(device), torch.tensor([[float(theta)]]))
             r.append(np.squeeze(y_hat[0].cpu()))
     r = np.stack(r, axis=0)
     m = montage(r, grid_shape=(1, r.shape[0]))
