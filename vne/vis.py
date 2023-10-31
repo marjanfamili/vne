@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import umap
+import random
+import torch
+from skimage.util import montage
 
 def plot_affinity(lookup,molecule_list):
 
@@ -32,7 +35,10 @@ def plot_loss(loss_plot,  kldloss_plot,sloss_plot, rloss_plot):
 
 def plot_umap(enc,lbl,epoch,  molecule_list, filename):
     enc = np.concatenate(enc, axis=0)
-
+    plt.clf()
+    plt.plot(enc)
+    plt.savefig("latent_dist.png")
+    plt.clf()
     reducer = umap.UMAP(random_state=42)
     embedding = reducer.fit_transform(enc)
 
@@ -57,13 +63,52 @@ def plot_umap(enc,lbl,epoch,  molecule_list, filename):
     ax.set_title(f'UMAP projection', fontsize=24)
     plt.savefig(filename, dpi=144)
 
+def plot_z_disentanglement(dataset,model,device):
+    enc = []
+    draw_four = random.sample(range(len(dataset)), k=4)
+    for i in range(4):
+        img, img_id= dataset[i]
+        mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))
+        z = model.reparameterise(mu, log_var)
+        enc.append(z.cpu())
 
-def plot_pose(model):
+ 
+    # Number of interpolation steps
+    num_steps = 10
+    fig, axes = plt.subplots(num_steps, num_steps, figsize=(num_steps*2, num_steps*2))
+
+    for i in range(num_steps):
+        for j in range(num_steps):
+            t1, t2 = i /(num_steps-1), j / (num_steps-1)
+
+
+            # Linear interpolation in latent space
+            interpolated_encoding = (1 - t1) * ((1 - t2) * enc[0] + t2 * enc[1]) + t1 * ((1 - t2) * enc[2] + t2 * enc[3])
+
+            # Decode the interpolated encoding to generate an image
+            with torch.no_grad():
+                decoded_image = model.decode(interpolated_encoding.to(device), torch.Tensor(1, 1))
+            
+            axes[i, j].imshow(decoded_image.cpu().squeeze().numpy(), cmap='gray')
+            axes[i, j].axis('off')
+
+
+  
+    # Adjust spacing between subplots
+    plt.subplots_adjust(wspace=0, hspace=0)
+
+    # Save the figure
+    plt.savefig("z_interpolate.png")
+
+
+def plot_pose(model,dataset,device):
     pose_angle = []
     r = []
+    THETA_LOWER = -45
+    THETA_UPPER = 45
 
-    with torch.inference_mode(model):
-        for theta in range(-45,45):
+    with torch.inference_mode():
+        for theta in range(THETA_LOWER,THETA_UPPER):
             y = dataset[3]
             x, z, z_pose, mu, logvar = model(y[0][np.newaxis, ...].to(device=device))     
             if theta % 5 == 0 : 
@@ -74,6 +119,22 @@ def plot_pose(model):
     ax1, ax2 = ax
 
 
+    coef = np.polyfit(range(THETA_LOWER,THETA_UPPER),np.squeeze(pose_angle),1)
+    poly1d_fn = np.poly1d(coef) 
+    ax1.plot(range(THETA_LOWER,THETA_UPPER),np.squeeze(pose_angle),'yo',range(THETA_LOWER,THETA_UPPER),poly1d_fn(range(THETA_LOWER,THETA_UPPER)),'--k',
+        linewidth=2)
+    ax1.set_xlabel(r'$\theta$')
+    ax1.set_ylabel('pose')
+
+    r = np.stack(r, axis=0)
+    m = montage(r, grid_shape=(3, 6))
+    ax2.imshow(m)
+    ax2.axis('off')
+
+    fig.tight_layout()
+    fig.savefig("pose_angle_images.png", dpi=144)
+
+    
 def to_img(x):
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1) #. Clamps all elements in input into the range [ min, max ]. 

@@ -11,7 +11,7 @@ import csv
 from vne.vae import ShapeVAE, ShapeSimilarityLoss
 from vne.special.affinity_mat_create import similarity_matrix
 from vne.special.alphanumeric_simulator import  alpha_num_Simulator
-from vne.vis import plot_affinity, plot_loss,plot_umap, to_img, plot_pose
+from vne.vis import plot_affinity, plot_loss,plot_umap, to_img, plot_pose, plot_z_disentanglement
 from vne.dataset import alphanumDataset, SubTomogram_dataset, CustomMNIST
 from vne.read_config import get_config_values
 from tqdm import tqdm
@@ -86,9 +86,8 @@ elif data_nat=="alphanum":
 else:
     print("didnt define data_nat")
 
-
-x = dataset[0]
-print(x[0].shape)
+x = dataset[15]
+print("data shape is : ", x[0].shape)
 if not data_format=='mrc':
     fig = plt.figure()
     fig.colorbar(plt.imshow(np.squeeze(x[0].numpy())))
@@ -136,7 +135,6 @@ for epoch in range(EPOCHS):
         s_loss = similarity_loss(mol_id, mu)
         
         loss = r_loss + (GAMMA * s_loss) + (BETA * kld_loss)
-        print(loss)
         # ===================backward====================
         optimizer.zero_grad() # set the gradient of all optimised torch.tensors to zero
         loss.backward()
@@ -149,6 +147,7 @@ for epoch in range(EPOCHS):
     rloss_plot.append(r_loss.cpu().clone().detach().numpy())
 
     print(f"epoch [{epoch+1}/{EPOCHS}], loss:{total_loss:.4f}, reconstruction : {r_loss.data}, Affinity: {s_loss.data}, KLD: {kld_loss.data}")
+
     if epoch % 10 == 0 or epoch == EPOCHS-1:
 
         if data_format!="mrc":
@@ -165,14 +164,13 @@ for epoch in range(EPOCHS):
         lbl = []
         lbl_train = []
         with torch.inference_mode():
-            for i in tqdm(range(5000)):
+            for i in tqdm(range(1000)):
                 j = np.random.choice(range(len(test_dataset)))
                 img, img_id= test_dataset[j]
                 mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))
                 z = model.reparameterise(mu, log_var)
                 enc.append(z.cpu())
                 lbl.append(img_id)
-
                 k = np.random.choice(range(len(dataset)))
                 img, img_id= dataset[k]
                 mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))
@@ -185,8 +183,8 @@ for epoch in range(EPOCHS):
         plot_umap(enc_train, lbl_train,epoch,molecule_list, f"UMAP_train{epoch}")
         plot_loss(loss_plot, kldloss_plot,sloss_plot,rloss_plot)
 
-
+plot_z_disentanglement(dataset,model,device)
 
 torch.save(model.state_dict(), './conv_autoencoder.pth')
-plot_pose(model)
+plot_pose(model,dataset,device)
 # plot loss vs EPOCH
