@@ -46,7 +46,7 @@ GAMMA = config_data.get('gamma')
 BETA_FACT = config_data.get('beta_fact')
 data_format = config_data.get('data_format')
 IMAGES_PER_EPOCH=10000
-KLD_WEIGHT = 1. / (64*64)
+KLD_WEIGHT = 1. / (32*32)
 BETA = BETA_FACT * KLD_WEIGHT
 print(data_format, BETA_FACT, GAMMA, datapath, aff_mat, classes, data_nat, alpha_num_list, BATCH_SIZE, EPOCHS, POSE_DIMS, LATENT_DIMS)
 
@@ -165,13 +165,14 @@ for epoch in range(EPOCHS):
         lbl = []
         lbl_train = []
         with torch.inference_mode():
-            for i in tqdm(range(1000)):
+            for i in tqdm(range(5000)):
                 j = np.random.choice(range(len(test_dataset)))
                 img, img_id= test_dataset[j]
                 mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))
                 z = model.reparameterise(mu, log_var)
                 enc.append(z.cpu())
                 lbl.append(img_id)
+                
                 k = np.random.choice(range(len(dataset)))
                 img, img_id= dataset[k]
                 mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))

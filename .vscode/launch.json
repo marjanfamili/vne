@@ -10,7 +10,7 @@
             "type": "python",
             "cwd": "/Users/mfamili/work/exp_vne/mnist/",
             "program": "/Users/mfamili/OneDrive/vne/run.py",
-            "pythonPath":"/Users/mfamili/work/vne_env/bin/python",
+            "python":"/Users/mfamili/work/vne_env/bin/python",
             "args": ["--config_file", "vne-input.yaml"],
             "console": "integratedTerminal",
             "request": "launch",

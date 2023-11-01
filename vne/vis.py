@@ -65,40 +65,41 @@ def plot_umap(enc,lbl,epoch,  molecule_list, filename):
 
 def plot_z_disentanglement(dataset,model,device):
     enc = []
-    draw_four = random.sample(range(len(dataset)), k=4)
-    for i in range(4):
-        img, img_id= dataset[i]
-        mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))
-        z = model.reparameterise(mu, log_var)
-        enc.append(z.cpu())
+    for num_fig in range(5):
+        draw_four = random.sample(range(len(dataset)), k=4)
+        for i in range(4):
+            img, img_id= dataset[i]
+            mu, log_var, pose = model.encode(img[np.newaxis,...].to(device))
+            z = model.reparameterise(mu, log_var)
+            enc.append(z.cpu())
 
- 
-    # Number of interpolation steps
-    num_steps = 10
-    fig, axes = plt.subplots(num_steps, num_steps, figsize=(num_steps*2, num_steps*2))
+    
+        # Number of interpolation steps
+        num_steps = 10
+        fig, axes = plt.subplots(num_steps, num_steps, figsize=(num_steps*2, num_steps*2))
 
-    for i in range(num_steps):
-        for j in range(num_steps):
-            t1, t2 = i /(num_steps-1), j / (num_steps-1)
-
-
-            # Linear interpolation in latent space
-            interpolated_encoding = (1 - t1) * ((1 - t2) * enc[0] + t2 * enc[1]) + t1 * ((1 - t2) * enc[2] + t2 * enc[3])
-
-            # Decode the interpolated encoding to generate an image
-            with torch.no_grad():
-                decoded_image = model.decode(interpolated_encoding.to(device), torch.Tensor(1, 1))
-            
-            axes[i, j].imshow(decoded_image.cpu().squeeze().numpy(), cmap='gray')
-            axes[i, j].axis('off')
+        for i in range(num_steps):
+            for j in range(num_steps):
+                t1, t2 = i /(num_steps-1), j / (num_steps-1)
 
 
-  
-    # Adjust spacing between subplots
-    plt.subplots_adjust(wspace=0, hspace=0)
+                # Linear interpolation in latent space
+                interpolated_encoding = (1 - t1) * ((1 - t2) * enc[0] + t2 * enc[1]) + t1 * ((1 - t2) * enc[2] + t2 * enc[3])
 
-    # Save the figure
-    plt.savefig("z_interpolate.png")
+                # Decode the interpolated encoding to generate an image
+                with torch.no_grad():
+                    decoded_image = model.decode(interpolated_encoding.to(device), torch.Tensor(1, 1))
+                
+                axes[i, j].imshow(decoded_image.cpu().squeeze().numpy(), cmap='gray')
+                axes[i, j].axis('off')
+
+
+    
+        # Adjust spacing between subplots
+        plt.subplots_adjust(wspace=0, hspace=0)
+
+        # Save the figure
+        plt.savefig("z_interpolate_{num_fig}.png")
 
 
 def plot_pose_interpolation(model,dataset,device):
@@ -107,7 +108,7 @@ def plot_pose_interpolation(model,dataset,device):
         y = dataset[0]
         x, z, z_pose, mu, logvar = model(y[0][np.newaxis, ...].to(device=device, dtype=torch.float))
 
-        for theta in np.linspace(-1, 1, 16):
+        for theta in np.linspace(1, 1, 16):
             y_hat = model.decode(z.to(device), torch.tensor([[float(theta)]]))
             r.append(np.squeeze(y_hat[0].cpu()))
     r = np.stack(r, axis=0)
