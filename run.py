@@ -102,6 +102,7 @@ dims =dataset[0][0].shape[1:]
 model = ShapeVAE(
     latent_dims = LATENT_DIMS,
     pose_dims = POSE_DIMS,
+    input_shape =(BATCH_SIZE,) + dims,
 ).to(device)
 
 
@@ -124,7 +125,7 @@ for epoch in range(EPOCHS):
         mol_id = Variable(mol_id).to(device)
         # ===================forward=====================
         output, z, z_pose, mu, log_var = model(img)
-        
+
         # reconstruction loss
         r_loss = reconstruction_loss(output, img)
         
@@ -136,6 +137,8 @@ for epoch in range(EPOCHS):
         s_loss = similarity_loss(mol_id, mu)
         
         loss = r_loss + (GAMMA * s_loss) + (BETA * kld_loss)
+
+        print (loss)
         # ===================backward====================
         optimizer.zero_grad() # set the gradient of all optimised torch.tensors to zero
         loss.backward()

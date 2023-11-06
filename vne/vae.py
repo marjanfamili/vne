@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-
+from .decoders.differentiable import GaussianSplatDecoder
 
 class ShapeSimilarityLoss:
     """Shape similarity loss based on pre-calculated shape similarity.
@@ -182,7 +182,7 @@ class ShapeVAE(torch.nn.Module):
     """
 
     def __init__(
-        self, latent_dims: int = 8, pose_dims: int = 1, spatial_dims: int = 2
+        self, latent_dims: int = 8, pose_dims: int = 1, spatial_dims: int = 2, input_shape = (1,64,64)
     ):
         super(ShapeVAE, self).__init__()
 
@@ -213,17 +213,19 @@ class ShapeVAE(torch.nn.Module):
             torch.nn.Flatten(),
         )
 
-        self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(latent_dims + pose_dims, flat_shape),
-            torch.nn.Unflatten(-1, unflat_shape),
-            conv_T(64, 32, 3, stride=2),
-            torch.nn.ReLU(True),
-            conv_T(32, 16, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv_T(16, 8, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv_T(8, 1, 2, stride=2, padding=1),
-        )
+        self.decoder = GaussianSplatDecoder(shape=input_shape,latent_dims=16)
+
+        # self.decoder = torch.nn.Sequential(
+        #     torch.nn.Linear(latent_dims + pose_dims, flat_shape),
+        #     torch.nn.Unflatten(-1, unflat_shape),
+        #     conv_T(64, 32, 3, stride=2),
+        #     torch.nn.ReLU(True),
+        #     conv_T(32, 16, 3, stride=2, padding=1),
+        #     torch.nn.ReLU(True),
+        #     conv_T(16, 8, 3, stride=2, padding=1),
+        #     torch.nn.ReLU(True),
+        #     conv_T(8, 1, 2, stride=2, padding=1),
+        #     )
 
         self.mu = torch.nn.Linear(flat_shape, latent_dims)
         self.log_var = torch.nn.Linear(flat_shape, latent_dims)
@@ -233,7 +235,7 @@ class ShapeVAE(torch.nn.Module):
         mu, log_var, pose = self.encode(x)
         z = self.reparameterise(mu, log_var)
         z_pose = torch.cat([pose, z], dim=-1)
-        x = self.decode(z,pose)
+        x = self.decoder(z,pose)
         return x, z, z_pose, mu, log_var
 
     def reparameterise(

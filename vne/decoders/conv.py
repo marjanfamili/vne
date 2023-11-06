@@ -36,3 +36,4 @@ class Decoder3D(BaseDecoder):
     def forward(self, z: torch.Tensor, pose: torch.Tensor) -> torch.Tensor:
         z_pose = torch.cat([z, pose], dim=-1)
         return self.model(z_pose)
+
