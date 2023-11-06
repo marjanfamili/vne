@@ -73,7 +73,7 @@ def create_example(text: str, angle: float = 0.0) -> np.ndarray:
 
     offset = tuple(
         [
-            (raw.shape[dim] - DEFAULT_FONT.getsize(text)[dim]) // 2
+            (raw.shape[dim] - DEFAULT_FONT.getbbox(text)[dim]) // 2
             for dim in range(raw.ndim)
         ]
     )

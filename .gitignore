@@ -140,3 +140,7 @@ vne/special/font/
 *.cif
 *.ipynb
 *.pth
+
+imgs/
+experiments/
+models/
