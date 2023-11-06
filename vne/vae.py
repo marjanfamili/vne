@@ -233,7 +233,7 @@ class ShapeVAE(torch.nn.Module):
         mu, log_var, pose = self.encode(x)
         z = self.reparameterise(mu, log_var)
         z_pose = torch.cat([pose, z], dim=-1)
-        x = self.decode(z,pose)
+        x = self.decode(z_pose)
         return x, z, z_pose, mu, log_var
 
     def reparameterise(
