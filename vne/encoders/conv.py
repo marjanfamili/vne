@@ -5,7 +5,6 @@ import numpy as np
 from typing import Tuple
 
 from vne.encoders.base import BaseEncoder
-from vne.vae import dims_after_pooling
 
 
 class Encoder3D(BaseEncoder):
@@ -46,3 +45,22 @@ class Encoder3D(BaseEncoder):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
+
+
+
+def dims_after_pooling(start: int, n_pools: int) -> int:
+    """Calculate the size of a layer after n pooling ops.
+
+    Parameters
+    ----------
+    start: int
+        The size of the layer before pooling.
+    n_pools: int
+        The number of pooling operations.
+
+    Returns
+    -------
+    dims: int
+        The size of the layer after pooling.
+    """
+    return start // (2**n_pools)

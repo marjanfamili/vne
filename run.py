@@ -32,6 +32,7 @@ config_data = get_config_values(yaml_file_path)
 
 
 LATENT_DIMS = config_data.get('latent_dims')
+freq_epoch_image = config_data.get('freq_epoch_image')
 POSE_DIMS = config_data.get('pose_dims')
 EPOCHS = config_data.get('epochs')
 BATCH_SIZE = config_data.get('batch_size')
@@ -100,6 +101,7 @@ similarity_loss = ShapeSimilarityLoss(lookup=torch.Tensor(lookup).to(device))
 
 dims =dataset[0][0].shape[1:]
 model = ShapeVAE(
+    input_shape = dims,
     latent_dims = LATENT_DIMS,
     pose_dims = POSE_DIMS,
 ).to(device)
@@ -149,10 +151,10 @@ for epoch in range(EPOCHS):
 
     print(f"epoch [{epoch+1}/{EPOCHS}], loss:{total_loss:.4f}, reconstruction : {r_loss.data}, Affinity: {s_loss.data}, KLD: {kld_loss.data}")
 
-    if epoch % 10 == 0 or epoch == EPOCHS-1:
+    if epoch % freq_epoch_image == 0 or epoch == EPOCHS-1:
 
         if data_format!="mrc":
-
+            print(output.shape)
             pic = to_img(output.to(device).data)
             save_image(pic, './image_{}.png'.format(epoch))
 

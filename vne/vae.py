@@ -2,8 +2,8 @@ from typing import Tuple
 
 import numpy as np
 import torch
-
-
+from vne.decoders.differentiable import GaussianSplatDecoder
+from vne.encoders.conv import dims_after_pooling
 class ShapeSimilarityLoss:
     """Shape similarity loss based on pre-calculated shape similarity.
 
@@ -182,48 +182,64 @@ class ShapeVAE(torch.nn.Module):
     """
 
     def __init__(
-        self, latent_dims: int = 8, pose_dims: int = 1, spatial_dims: int = 2
+        self, capacity: int=8, depth: int = 4, input_shape: tuple = [32,32],latent_dims: int = 8, pose_dims: int = 1, spatial_dims: int = 2
     ):
         super(ShapeVAE, self).__init__()
+
+
+        self.filters = [capacity * 2**x for x in range(depth)]
+
+        self.unflat_shape = tuple(
+            [
+                self.filters[-1],
+            ]
+            + [dims_after_pooling(ax, depth) for ax in input_shape]
+        )
+        flat_shape = np.prod(self.unflat_shape)
+
+        ndim = len(self.unflat_shape[1:])
+
+
 
         if spatial_dims == 2:
             conv = torch.nn.Conv2d
             conv_T = torch.nn.ConvTranspose2d
-            unflat_shape = (64, 4, 4)
         elif spatial_dims == 3:
             conv = torch.nn.Conv3d
             conv_T = torch.nn.ConvTranspose3d
-            unflat_shape = (64, 4, 4, 4)
         else:
             raise ValueError(
                 f"`spatial_dims` must be in (2, 3), got: {spatial_dims}."
             )
+        self.encoder = torch.nn.Sequential()
+        input_channel = 1
+        for d in range(len(self.filters)):
+            self.encoder.append(
+                conv(
+                    in_channels=input_channel,
+                    out_channels=self.filters[d],
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                )
+            )
+            self.encoder.append(torch.nn.ReLU(True))
+            input_channel = self.filters[d]
 
-        flat_shape = np.prod(unflat_shape)
+        self.encoder.append(torch.nn.Flatten())
 
-        self.encoder = torch.nn.Sequential(
-            conv(1, 8, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv(8, 16, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv(16, 32, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv(32, 64, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            torch.nn.Flatten(),
-        )
-
-        self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(latent_dims + pose_dims, flat_shape),
-            torch.nn.Unflatten(-1, unflat_shape),
-            conv_T(64, 32, 3, stride=2),
-            torch.nn.ReLU(True),
-            conv_T(32, 16, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv_T(16, 8, 3, stride=2, padding=1),
-            torch.nn.ReLU(True),
-            conv_T(8, 1, 2, stride=2, padding=1),
-        )
+        self.decoder = GaussianSplatDecoder(input_shape, n_splats=128, latent_dims = latent_dims)
+        # self.decoder = torch.nn.Sequential(
+        #     torch.nn.Linear(latent_dims + pose_dims, flat_shape),
+        #     torch.nn.Unflatten(-1, unflat_shape),
+        #     conv_T(64, 32, 3, stride=2),
+        #     torch.nn.ReLU(True),
+        #     conv_T(32, 16, 3, stride=2, padding=1),
+        #     torch.nn.ReLU(True),
+        #     conv_T(16, 8, 3, stride=2, padding=1),
+        #     torch.nn.ReLU(True),
+        #     conv_T(8, 1, 2, stride=2, padding=1),
+        # )
 
         self.mu = torch.nn.Linear(flat_shape, latent_dims)
         self.log_var = torch.nn.Linear(flat_shape, latent_dims)
@@ -250,23 +266,5 @@ class ShapeVAE(torch.nn.Module):
         pose = self.pose(encoded)
         return mu, log_var, pose
 
-    def decode(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decoder(x)
-
-
-def dims_after_pooling(start: int, n_pools: int) -> int:
-    """Calculate the size of a layer after n pooling ops.
-
-    Parameters
-    ----------
-    start: int
-        The size of the layer before pooling.
-    n_pools: int
-        The number of pooling operations.
-
-    Returns
-    -------
-    dims: int
-        The size of the layer after pooling.
-    """
-    return start // (2**n_pools)
+    def decode(self, x: torch.Tensor, pose:torch.Tensor) -> torch.Tensor:
+        return self.decoder(x, pose)

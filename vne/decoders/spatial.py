@@ -189,7 +189,7 @@ class RotatedCoordinates(torch.nn.Module):
         # convert axis angles to quaternions
         assert pose.shape[-1] == 4, pose.shape
         quaternions = axis_angle_to_quaternion(pose, normalize=True)
-
+    
         # convert the quaternions to rotation matrices
         # NOTE(arl): we should probably use rotation matrices OR quaternions
         # converting between them is not necessary
@@ -200,7 +200,6 @@ class RotatedCoordinates(torch.nn.Module):
             rotation_matrices,
             self.coords,
         )
-
         # use only the required spatial dimensions
         rotated_coords = rotated_coords[:, : self._ndim, :]
 

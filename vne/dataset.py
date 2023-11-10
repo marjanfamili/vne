@@ -22,13 +22,16 @@ class CustomMNIST(torch.utils.data.Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0,), (1,)),
         ])
-        self.dataset = datasets.MNIST(root=root, train=train, transform=self.transform, download=True)
+        self.dataset = datasets.MNIST(root=root, train=train, transform=self.transform, download=False)
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         image, label = self.dataset[idx]
+        image = pad_or_crop(image.numpy().squeeze(), 32, 32)
+        image = torch.from_numpy(image).unsqueeze(0)
+
         return image, label
 
 
@@ -153,7 +156,7 @@ class SubTomogram_dataset(torch.utils.data.Dataset):
         ## read the subtomogram 
         if self.data_format == "npy":
             data = np.load(os.path.join(self.root_dir,self.paths[idx]))
-            data = padding(data, 32, 32)
+            data = pad_or_crop(data, 32, 32)
 
         elif self.data_format == "mrc":
             warnings.simplefilter('ignore')  # to mute some warnings produced when opening the tomos
@@ -165,7 +168,7 @@ class SubTomogram_dataset(torch.utils.data.Dataset):
             with mrcfile.open(os.path.join(self.root_dir,self.paths[idx])) as mrc:
                 data = np.array(mrc.data)
 
-            data = padding(data, 32, 32, 32)
+            data = pad_or_crop(data, 32, 32, 32)
             
         #### normalise the data convert to torch id and grab the molecule index
         mol = NormalizeData(data)
@@ -208,35 +211,48 @@ def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 
-def padding(array, xx, yy, zz=None):
+def pad_or_crop(array, xx, yy, zz=None):
     """
     :param array: numpy array
     :param xx: desired height
-    :param yy: desirex width
+    :param yy: desired width
     :param zz: desired depth
-    :return: padded array
+    :return: padded or cropped array
     """
-
-    h = array.shape[0]
-    w = array.shape[1]
+    h, w = array.shape[:2]
     if zz is not None:
         z = array.shape[2]
 
-    a = (xx - h) // 2
-    aa = xx - a - h
+    if h < xx or w < yy or (zz is not None and z < zz):
+        # Pad the array
+        a = max(0, (xx - h) // 2)
+        aa = max(0, xx - a - h)
 
-    b = (yy - w) // 2
-    bb = yy - b - w
+        b = max(0, (yy - w) // 2)
+        bb = max(0, yy - b - w)
 
-    if zz is not None:
+        if zz is not None:
+            c = max(0, (zz - z) // 2)
+            cc = max(0, zz - c - z)
+            array = np.pad(array, pad_width=((a, aa), (b, bb), (c, cc)), mode='constant')
+        else:
+            array = np.pad(array, pad_width=((a, aa), (b, bb)), mode='constant')
+    elif h > xx or w > yy or (zz is not None and z > zz):
+        # Crop the array
+        a = max(0, (h - xx) // 2)
+        aa = max(0, h - a - xx)
 
-        c = (zz - z) // 2
-        cc = zz - c - z
-        array = np.pad(array, pad_width=((a, aa), (b, bb), (c, cc)), mode='constant')
-    else:
-        array = np.pad(array, pad_width=((a, aa), (b, bb)), mode='constant')
+        b = max(0, (w - yy) // 2)
+        bb = max(0, w - b - yy)
+
+        if zz is not None:
+            c = max(0, (z - zz) // 2)
+            cc = max(0, z - c - zz)
+            array = array[a:-aa, b:-bb, c:-cc]
+        else:
+            array = array[a:-aa, b:-bb]
+
     return array
-
 
 # Define a function to apply random rotations and resize to 64x64
 def random_rotate_and_resize(image):

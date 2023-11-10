@@ -13,7 +13,7 @@ CHARS = string.ascii_lowercase + string.digits
 DEFAULT_FONT = None  # ImageFont.load_default()
 
 
-def _download_default_font():
+def _download_ont():
     """Download a default font and return the filename."""
 
     import io
