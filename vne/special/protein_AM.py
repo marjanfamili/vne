@@ -94,7 +94,6 @@ def pdb_centre(coords)-> np.ndarray:
     dist = []
     
      
-    # print(centroids - protein_centre)
     dist_vect = coords.copy()
     
     for i in range(len(coords)):

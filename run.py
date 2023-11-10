@@ -126,7 +126,7 @@ for epoch in range(EPOCHS):
         mol_id = Variable(mol_id).to(device)
         # ===================forward=====================
         output, z, z_pose, mu, log_var = model(img)
-        
+
         # reconstruction loss
         r_loss = reconstruction_loss(output, img)
         
@@ -154,7 +154,6 @@ for epoch in range(EPOCHS):
     if epoch % freq_epoch_image == 0 or epoch == EPOCHS-1:
 
         if data_format!="mrc":
-            print(output.shape)
             pic = to_img(output.to(device).data)
             save_image(pic, './image_{}.png'.format(epoch))
 
