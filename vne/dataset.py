@@ -141,13 +141,14 @@ class SubTomogram_dataset(torch.utils.data.Dataset):
         self.data_format = data_format
         self.image_per_epoch = IMAGES_PER_EPOCH
         self.root_dir = root_dir
+        print(root_dir)
         self.paths = [
-            f for f in os.listdir(root_dir) if "." + self.data_format in f and f[:1] in molecule_list
+            f for f in os.listdir(root_dir) if "." + self.data_format in f and f.split("_")[0] in molecule_list
         ]
 
         random.shuffle(self.paths)
         ids = np.unique([f.split("_")[0] for f in self.paths])
-        self.mol_id = [f[:1] for f in self.paths if "." + self.data_format in f and f[:1] in molecule_list]
+        self.mol_id = [f.split("_")[0] for f in self.paths if "." + self.data_format in f and f.split("_")[0] in molecule_list]
 
         print(molecule_list)
         self.proteins = molecule_list  # list of all the classes
@@ -169,7 +170,8 @@ class SubTomogram_dataset(torch.utils.data.Dataset):
                 data = np.array(mrc.data)
 
             data = pad_or_crop(data, 32, 32, 32)
-            
+
+        
         #### normalise the data convert to torch id and grab the molecule index
         mol = NormalizeData(data)
         mol = torch.as_tensor(mol[np.newaxis, ...], dtype=torch.float32)

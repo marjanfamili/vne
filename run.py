@@ -34,7 +34,9 @@ config_data = get_config_values(yaml_file_path)
 LATENT_DIMS = config_data.get('latent_dims')
 freq_epoch_image = config_data.get('freq_epoch_image')
 mnist_size = config_data.get('mnist_size')
-mnist_size = [int(s) if s.isdigit() else s for s in mnist_size.split(',')]
+
+if mnist_size is not None:
+    mnist_size = [int(s) if s.isdigit() else s for s in mnist_size.split(',')]
 
 POSE_DIMS = config_data.get('pose_dims')
 EPOCHS = config_data.get('epochs')
@@ -103,10 +105,12 @@ reconstruction_loss = nn.MSELoss() #Creates a criterion that measures the mean s
 similarity_loss = ShapeSimilarityLoss(lookup=torch.Tensor(lookup).to(device))
 
 dims =dataset[0][0].shape[1:]
+print(dims)
 model = ShapeVAE(
     input_shape = dims,
     latent_dims = LATENT_DIMS,
     pose_dims = POSE_DIMS,
+    spatial_dims= 3
 ).to(device)
 
 
