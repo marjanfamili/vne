@@ -16,20 +16,20 @@ NUM_IMAGES = 100
 
 
 class CustomMNIST(torch.utils.data.Dataset):
-    def __init__(self, root, train=True):
+    def __init__(self, root, size, train=True):
         self.transform = transforms.Compose([
             transforms.Lambda(lambda x: random_rotate_and_resize(x)),
             transforms.ToTensor(),
             transforms.Normalize((0,), (1,)),
         ])
         self.dataset = datasets.MNIST(root=root, train=train, transform=self.transform, download=False)
-
+        self.size = size
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         image, label = self.dataset[idx]
-        image = pad_or_crop(image.numpy().squeeze(), 32, 32)
+        image = pad_or_crop(image.numpy().squeeze(), *self.size)
         image = torch.from_numpy(image).unsqueeze(0)
 
         return image, label

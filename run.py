@@ -33,6 +33,9 @@ config_data = get_config_values(yaml_file_path)
 
 LATENT_DIMS = config_data.get('latent_dims')
 freq_epoch_image = config_data.get('freq_epoch_image')
+mnist_size = config_data.get('mnist_size')
+mnist_size = [int(s) if s.isdigit() else s for s in mnist_size.split(',')]
+
 POSE_DIMS = config_data.get('pose_dims')
 EPOCHS = config_data.get('epochs')
 BATCH_SIZE = config_data.get('batch_size')
@@ -67,8 +70,8 @@ elif aff_mat:
 plot_affinity(lookup,molecule_list)
 
 if data_nat == "mnist":
-    dataset = CustomMNIST(root='./data', train=True)
-    test_dataset = CustomMNIST(root='./data', train=False)
+    dataset = CustomMNIST(root='./data',size = mnist_size, train=True)
+    test_dataset = CustomMNIST(root='./data',size = mnist_size, train=False)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 elif data_nat=="subtomo":

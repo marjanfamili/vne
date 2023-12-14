@@ -158,5 +158,5 @@ def plot_pose(model,dataset,device):
 def to_img(x):
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1) #. Clamps all elements in input into the range [ min, max ]. 
-    x = x.view(x.size(0), 1, 32, 32) # Returns a new tensor with the same data as the self tensor but of a different shape.
+    x = x.view(x.size(0), 1, 64, 64) # Returns a new tensor with the same data as the self tensor but of a different shape.
     return x

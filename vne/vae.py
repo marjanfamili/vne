@@ -228,7 +228,7 @@ class ShapeVAE(torch.nn.Module):
 
         self.encoder.append(torch.nn.Flatten())
 
-        self.decoder = GaussianSplatDecoder(input_shape, n_splats=128, latent_dims = latent_dims)
+        self.decoder = GaussianSplatDecoder(input_shape, n_splats=1024, latent_dims = latent_dims)
         # self.decoder = torch.nn.Sequential(
         #     torch.nn.Linear(latent_dims + pose_dims, flat_shape),
         #     torch.nn.Unflatten(-1, unflat_shape),
