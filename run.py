@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import torch
+import mrcfile
 from torch import nn
 from torch.autograd import Variable
 from torchvision.utils import save_image
@@ -8,7 +9,7 @@ from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
 import csv
-from vne.vae import ShapeVAE, ShapeSimilarityLoss
+from vne.vae import ShapeVAE, ShapeSimilarityLoss, AffinityVAE, AffinityCosineLoss
 from vne.special.affinity_mat_create import similarity_matrix
 from vne.special.alphanumeric_simulator import  alpha_num_Simulator
 from vne.vis import plot_affinity, plot_loss,plot_umap, to_img
@@ -18,8 +19,13 @@ from vne.read_config import get_config_values
 from tqdm import tqdm
 import argparse
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+from vne.decoders.differentiable import GaussianSplatDecoder
+from vne.encoders.conv import Encoder3D
 
+
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print("device in use is : ", device)
 # Create a command line argument parser
 parser = argparse.ArgumentParser(description="Read and process a YAML configuration file.")
 parser.add_argument("--config_file", required=True, help="Path to the YAML configuration file")
@@ -66,7 +72,7 @@ if aff_mat is None and data_nat == 'alphanum':
     lookup, imgs = similarity_matrix(simulator)
 
 elif aff_mat:
-    lookup =  np.genfromtxt(aff_mat, delimiter=',')
+    lookup =  np.genfromtxt(aff_mat, delimiter=',', skip_header=1)
 
 
 plot_affinity(lookup,molecule_list)
@@ -105,12 +111,12 @@ reconstruction_loss = nn.MSELoss() #Creates a criterion that measures the mean s
 similarity_loss = ShapeSimilarityLoss(lookup=torch.Tensor(lookup).to(device))
 
 dims =dataset[0][0].shape[1:]
-print(dims)
-model = ShapeVAE(
-    input_shape = dims,
+
+model = AffinityVAE(
+    encoder=Encoder3D(layer_channels = (8, 16, 32, 64), input_shape = dims ),
+    decoder=GaussianSplatDecoder(shape= dims, n_splats=1024, latent_dims = LATENT_DIMS, device= device),
     latent_dims = LATENT_DIMS,
-    pose_dims = POSE_DIMS,
-    spatial_dims= 3
+    pose_channels = POSE_DIMS,
 ).to(device)
 
 
@@ -135,7 +141,7 @@ for epoch in range(EPOCHS):
         output, z, z_pose, mu, log_var = model(img)
 
         # reconstruction loss
-        r_loss = reconstruction_loss(output, img)
+        r_loss = reconstruction_loss(output.to(device), img.to(device))
         
         # kl loss 
         # https://arxiv.org/abs/1312.6114 (equation 10 ) 

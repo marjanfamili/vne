@@ -50,12 +50,10 @@ class ShapeSimilarityLoss:
         # first calculate the shape similarity for the real classes
         c = torch.combinations(y_true, r=2, with_replacement=False)
         shape_similarity = self.lookup[c[:, 0], c[:, 1]]
-
         # now calculate the latent similarity
         z_id = torch.tensor(list(range(y_pred.shape[0])))
         c = torch.combinations(z_id, r=2, with_replacement=False)
         latent_similarity = self.cos(y_pred[c[:, 0], :], y_pred[c[:, 1], :])
-
         loss = self.l1loss(latent_similarity, shape_similarity)
         return loss
 
@@ -120,7 +118,6 @@ class AffinityCosineLoss:
         loss = self.l1loss(latent_similarity, affinity)
         return loss
 
-
 class AffinityVAE(torch.nn.Module):
     def __init__(
         self,
@@ -136,7 +133,6 @@ class AffinityVAE(torch.nn.Module):
         self.decoder = decoder
         self.latent_dims = latent_dims
         self.pose_channels = pose_channels
-
         flat_shape = self.encoder.flat_shape
 
         self.mu = torch.nn.Linear(flat_shape, latent_dims)
@@ -182,7 +178,7 @@ class ShapeVAE(torch.nn.Module):
     """
 
     def __init__(
-        self, capacity: int=8, depth: int = 4, input_shape: tuple = [32,32],latent_dims: int = 8, pose_dims: int = 1, spatial_dims: int = 2
+        self, capacity: int=8, depth: int = 4, input_shape: tuple = [32,32],latent_dims: int = 8, pose_dims: int = 4, spatial_dims: int = 2
     ):
         super(ShapeVAE, self).__init__()
 
@@ -228,7 +224,7 @@ class ShapeVAE(torch.nn.Module):
 
         self.encoder.append(torch.nn.Flatten())
 
-        self.decoder = GaussianSplatDecoder(input_shape, n_splats=1024, latent_dims = latent_dims)
+        self.decoder = GaussianSplatDecoder(input_shape, n_splats=1024, latent_dims = latent_dims, pose_dims = pose_dims)
         # self.decoder = torch.nn.Sequential(
         #     torch.nn.Linear(latent_dims + pose_dims, flat_shape),
         #     torch.nn.Unflatten(-1, unflat_shape),
@@ -268,3 +264,23 @@ class ShapeVAE(torch.nn.Module):
 
     def decode(self, x: torch.Tensor, pose:torch.Tensor) -> torch.Tensor:
         return self.decoder(x, pose)
+
+
+
+
+def dims_after_pooling(start: int, n_pools: int) -> int:
+    """Calculate the size of a layer after n pooling ops.
+
+    Parameters
+    ----------
+    start: int
+        The size of the layer before pooling.
+    n_pools: int
+        The number of pooling operations.
+
+    Returns
+    -------
+    dims: int
+        The size of the layer after pooling.
+    """
+    return start // (2**n_pools)
